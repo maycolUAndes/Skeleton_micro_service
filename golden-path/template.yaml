@@ -1,0 +1,111 @@
+# =====================================================================
+# DOCUMENTACIÓN DEL SOFTWARE TEMPLATE:
+# Este template implementa el Golden Path completo de Fase 2.
+#
+# Documentación de referencia:
+# https://backstage.io/docs/features/software-templates/writing-templates
+# =====================================================================
+
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+
+metadata:
+  name: microservicio-nodejs
+  title: "Microservicio NodeJS — Seguro por Defecto"
+  description: >
+    Golden Path para crear un nuevo microservicio NodeJS con estructura base,
+    publicarlo en tu repositorio de GitHub y registrarlo en el Software Catalog.
+  tags:
+    - nodejs
+    - microservicio
+    - golden-path
+
+# =====================================================================
+# SECCIÓN PARAMETERS: Define el formulario que verá el desarrollador.
+# =====================================================================
+parameters:
+  - title: "Información del Microservicio"
+    required:
+      - serviceName
+      - owner
+    properties:
+      serviceName:
+        title: "Nombre del Microservicio"
+        type: string
+        description: >
+          Nombre único del microservicio. Debe estar en minúsculas,
+          sin espacios ni caracteres especiales. Ejemplo: pagos-service.
+        maxLength: 50
+        pattern: "^[a-z0-9-]+$"
+        ui:autofocus: true
+        ui:help: "Usa minúsculas, números y guiones. Ej: mi-nuevo-servicio"
+
+      owner:
+        title: "Propietario (Owner)"
+        type: string
+        description: >
+          El equipo o usuario responsable de este microservicio.
+          Debe ser una entidad válida del Software Catalog.
+        ui:field: OwnerPicker
+        ui:options:
+          allowedKinds:
+            - Group
+            - User
+        ui:help: "Selecciona el equipo o usuario propietario del servicio"
+
+# =====================================================================
+# SECCIÓN STEPS: Define las acciones automatizadas del scaffolder.
+# =====================================================================
+steps:
+  # -------------------------------------------------------------------
+  # PASO 1: Descargar y parametrizar el skeleton del microservicio.
+  # -------------------------------------------------------------------
+  - id: fetch-base
+    name: "Descargar y parametrizar el skeleton"
+    action: fetch:template
+    input:
+      # Skeleton externo asociado a este repositorio de GitHub.
+      url: https://github.com/maycolUAndes/Skeleton_micro_service/tree/main
+      values:
+        serviceName: "${{ parameters.serviceName }}"
+        owner: "${{ parameters.owner }}"
+
+  # -------------------------------------------------------------------
+  # PASO 2: Publicar el código en un repositorio de GitHub.
+  # -------------------------------------------------------------------
+  - id: publish-github
+    name: "Publicar en GitHub"
+    action: publish:github
+    input:
+      repoUrl: "github.com?owner=${{ parameters.owner }}&repo=${{ parameters.serviceName }}"
+      description: "Microservicio ${{ parameters.serviceName }} generado mediante el Golden Path"
+      repoVisibility: private
+      defaultBranch: main
+      protectDefaultBranch: true
+      requiredApprovingReviewCount: 1
+      requiredConversationResolution: true
+      requireCodeOwnerReviews: false
+      dismissStaleReviews: true
+
+  # -------------------------------------------------------------------
+  # PASO 3: Registrar el componente en el Software Catalog de Backstage.
+  # -------------------------------------------------------------------
+  - id: register-catalog
+    name: "Registrar en el Software Catalog"
+    action: catalog:register
+    input:
+      repoContentsUrl: "${{ steps['publish-github'].output.repoContentsUrl }}"
+      catalogInfoPath: "/catalog-info.yaml"
+
+# =====================================================================
+# SECCIÓN OUTPUT: Muestra información útil al usuario al finalizar.
+# =====================================================================
+output:
+  links:
+    - title: "Ver repositorio en GitHub"
+      url: "${{ steps['publish-github'].output.remoteUrl }}"
+      icon: github
+
+    - title: "Ver en el Software Catalog"
+      entityRef: "${{ steps['register-catalog'].output.entityRef }}"
+      icon: catalog
